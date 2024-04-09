@@ -3,5 +3,5 @@ from supervenn._algorithms import (
     get_permutations,
     break_into_chunks
 )
-
 from supervenn._plots import supervenn
+from supervenn._utils import make_sets_from_chunk_sizes
