@@ -9,6 +9,7 @@ import warnings
 import numpy as np
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import matplotlib.colors as mplcolor
 
 from supervenn._algorithms import (
     break_into_chunks,
@@ -88,11 +89,11 @@ def get_alternated_ys(ys_count, low, high):
 
 
 def plot_binary_array(arr, ax=None, col_widths=None, row_heights=None, min_width_for_annotation=1,
-                      row_annotations=None, row_annotations_y=0.5,
+                      row_annotations=None, row_annotations_y=0.5, row_annotations_x=0.5,row_annotations_ha='center', row_annotations_offset=0.5,
                       col_annotations=None, col_annotations_area_height=0.75, col_annotations_ys_count=1,
                       rotate_col_annotations=False,
                       color_by='row', bar_height=1, bar_alpha=0.6, bar_align='edge', color_cycle=None,
-                      alternating_background=True, fontsize=DEFAULT_FONTSIZE):
+                      alternating_background=False, fontsize=DEFAULT_FONTSIZE):
     """
     Visualize a binary array as a grid with variable sized columns and rows, where cells with 1 are filled using bars
     and cells with 0 are blank.
@@ -103,6 +104,9 @@ def plot_binary_array(arr, ax=None, col_widths=None, row_heights=None, min_width
     :param min_width_for_annotation: don't annotate column with its size if size is less than this value (default 1)
     :param row_annotations: annotations for each row, plotted in the middle of the row
     :param row_annotations_y: a number in (0, 1), position for row annotations in the row. Default 0.5 - center of row.
+    :param row_annotations_x: a number in (0, 1), position for row annotations in the full width. Default 0.5 - center of total columns.
+    :param row_annotations_offset: Add translation to row annotation. Default 0 - no translation.
+    :param row_annotations_ha: horizontal alightment (center, left, or right). Default center
     :param col_annotations: annotations for columns, plotted in the bottom, below the x axis.
     :param col_annotations_area_height: height of area for column annotations in inches, 1 by default
     :param col_annotations_ys_count: 1 (default), 2, or 3 - use to reduce clutter in column annotations area
@@ -112,7 +116,7 @@ def plot_binary_array(arr, ax=None, col_widths=None, row_heights=None, min_width
     :param bar_alpha: alpha for cell fills.
     :param bar_align: vertical alignment of bars, 'edge' (defaulr) or 'center'. Only matters when bar_height < 1.
     :param color_cycle: a list of colors, given as names of matplotlib named colors, or hex codes (e.g. '#1f77b4')
-    :param alternating_background: True (default) / False - give avery second row a slight grey tint
+    :param alternating_background: True / False (default) - give avery second row a slight grey tint
     :param fontsize: font size for annotations (default {}).
     """.format(DEFAULT_FONTSIZE)
     if row_heights is None:
@@ -149,7 +153,7 @@ def plot_binary_array(arr, ax=None, col_widths=None, row_heights=None, min_width
     if ax is not None:
         plt.sca(ax)
 
-    # BARS
+    # CELLS
     for row_index, (row, grid_y, row_height) in enumerate(zip(arr, grid_ys, row_heights)):
 
         bar_y = grid_y + 0.5 * row_height if bar_align == 'center' else grid_y
@@ -170,8 +174,9 @@ def plot_binary_array(arr, ax=None, col_widths=None, row_heights=None, min_width
     if row_annotations is not None:
         for row_index, (grid_y, row_height, annotation) in enumerate(zip(grid_ys, row_heights, row_annotations)):
             annot_y = grid_y + row_annotations_y * row_height
-            plt.annotate(str(annotation), xy=(0.5 * sum(col_widths), annot_y),
-                         ha='center', va='center', fontsize=fontsize)
+            plt.annotate(str(annotation), xy=(row_annotations_x * sum(col_widths), annot_y),
+                         xytext=(row_annotations_x * sum(col_widths)+row_annotations_offset*sum(col_widths), annot_y),
+                         ha=row_annotations_ha, va='center', fontsize=fontsize)
 
     # COL ANNOTATIONS
     min_y = 0
@@ -228,14 +233,67 @@ def side_plot(values, widths, orient, fontsize=DEFAULT_FONTSIZE, min_width_for_a
     for i, (annotation_position, value, width) in enumerate(zip(annotation_positions, values, widths)):
         if width < min_width_for_annotation and horizontal:
             continue
-        x, y = 0.5 * max_value, annotation_position
+        x, y = 0.05 * max_value, annotation_position
+        ha='left'
+        va='center'
         if horizontal:
             x, y = y, x
-        plt.annotate(value, xy=(x, y), ha='center', va='center',
+            ha='center'
+            va='bottom'
+        plt.annotate(value, xy=(x, y), ha=ha, va=va,
                      rotation=rotate_annotations * 90, fontsize=fontsize)
 
     ticks(bar_edges, [])
     lim(0, max(values))
+    plt.grid(True)
+    
+def sub_plot(values, widths, orient, fontsize=DEFAULT_FONTSIZE, min_width_for_annotation=1, rotate_annotations=False,
+              color='tab:gray'):
+    """
+    Barplot with multiple bars of variable width right next to each other, with an option to rotate the plot 90 degrees.
+    :param values: the values to be plotted.
+    :param widths: Widths of bars
+    :param orient: 'h' / 'horizontal' (default) or 'v' / 'vertical'
+    :param fontsize: font size for annotations
+    :param min_width_for_annotation: for horizontal plot, don't annotate bars of widths less than this value (to avoid
+    clutter. Default 1 - annotate all.)
+    :param rotate_annotations: True/False, whether to print annotations vertically instead of horizontally
+    :param color: color of bars, default 'tab:gray'
+    """
+    bar_edges = 0.5+ np.insert(np.cumsum(widths), 0, 0)
+    annotation_positions = [-0.25+0.5 * (begin + end) for begin, end in zip(bar_edges[:-1], bar_edges[1:])]
+    max_value = max([max(value) for value in values.values()])
+    print(values)
+    print(max_value)
+    
+    for subgroup_name, subgroup_ids in  values.items():
+        print(np.array(widths)/len(values))
+        print(subgroup_ids)
+        print(annotation_positions)
+        print(bar_edges)
+        horizontal = False
+        plt.barh(y=bar_edges[:-1], width=subgroup_ids, height=np.array(widths)/len(values), align='edge', alpha=0.5, color=color)
+        ticks = plt.yticks
+        lim = plt.xlim
+
+        for i, (annotation_position, value, width) in enumerate(zip(annotation_positions, subgroup_ids, list(np.array(widths)/len(values)))):
+            if width < min_width_for_annotation and horizontal:
+                continue
+            x, y = 0.05 * max_value, annotation_position
+            ha='left'
+            va='center'
+            if horizontal:
+                x, y = y, x
+                ha='center'
+                va='bottom'
+            plt.annotate(value, xy=(x, y), ha=ha, va=va,
+                        rotation=rotate_annotations * 90, fontsize=fontsize)
+        
+        bar_edges = bar_edges - 1/len(values)
+        annotation_positions = np.array(annotation_positions) - 1/len(values)
+
+    ticks(bar_edges-0.5, [])
+    lim(0, max_value)
     plt.grid(True)
 
 
@@ -269,7 +327,7 @@ def remove_ticks(ax):
     ax.set_yticks([])
 
 
-def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5):
+def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5, subgroups=None):
     """
     Set up axes for plot and return them in a dictionary. The dictionary may include the following keys:
     - 'main': always present
@@ -310,15 +368,28 @@ def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5)
                                hspace=0, wspace=0)
 
         if side_plots == True:
+            if subgroups == True:   
+                width_ratios = [plot_width - side_plot_width, side_plot_width, side_plot_width]
+                height_ratios = [side_plot_width, plot_height - side_plot_width]
+                gs = get_gridspec(2, 3, height_ratios=height_ratios, width_ratios=width_ratios)
 
-            gs = get_gridspec(2, 2, height_ratios=height_ratios, width_ratios=width_ratios)
+                axes = {
+                    'main': fig.add_subplot(gs[1, 0]),
+                    'top_side_plot': fig.add_subplot(gs[0, 0]),
+                    'unused': fig.add_subplot(gs[0, 1]),
+                    'unused2': fig.add_subplot(gs[0, 2]),
+                    'right_side_plot': fig.add_subplot(gs[1, 1]),
+                    'right_sub_plot': fig.add_subplot(gs[1, 2]),
+                }
+            else:
+                gs = get_gridspec(2, 2, height_ratios=height_ratios, width_ratios=width_ratios)
 
-            axes = {
-                'main': fig.add_subplot(gs[1, 0]),
-                'top_side_plot': fig.add_subplot(gs[0, 0]),
-                'unused': fig.add_subplot(gs[0, 1]),
-                'right_side_plot': fig.add_subplot(gs[1, 1])
-            }
+                axes = {
+                    'main': fig.add_subplot(gs[1, 0]),
+                    'top_side_plot': fig.add_subplot(gs[0, 0]),
+                    'unused': fig.add_subplot(gs[0, 1]),
+                    'right_side_plot': fig.add_subplot(gs[1, 1])
+                }
 
         elif side_plots == 'top':
             gs = get_gridspec(2, 1, height_ratios=height_ratios)
@@ -333,6 +404,7 @@ def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5)
                 'main': fig.add_subplot(gs[0, 0]),
                 'right_side_plot': fig.add_subplot(gs[0, 1])
             }
+        
 
     # Remove tick from every axis, and set ticks length to 0 (we'll add ticks to the side plots manually later)
     for ax in axes.values():
@@ -342,13 +414,42 @@ def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5)
 
     return axes
 
+def colorFader(c1,c2,mix=0): 
+    """
+    fade (linear interpolate) from color c1 (at mix=0) to c2 (mix=1)
+    """
+    c1=np.array(mplcolor.to_rgb(c1))
+    c2=np.array(mplcolor.to_rgb(c2))
+    return mplcolor.to_hex((1-mix)*c1 + mix*c2)
 
-def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
+def ucla_colorgradient(n=10):
+    # Hardcode UCLA blue gradient
+    c1='#8BB8E8' #'#DAEBFE' #'#8BB8E8'
+    c2='#2774AE' #'#2774AE' #'#2774AE'
+    c3='#005587' #'#003B5C' #'#005587'
+    
+    if n < 2:
+        return [c1]
+    elif n <3:
+        return [c1, c2]
+    elif n < 4:
+        return [c1,c2,c3]
+    
+    map = []
+    for i in range(n//2+n%2):
+        map.append(colorFader(c1,c2,i/(n//2+n%2-1)))
+
+    for i in range(n//2):
+        map.append(colorFader(c2,c3,i/(n//2-1)))
+
+    return map
+
+def supervenn(sets, set_annotations=None, figsize=None, side_plots=True, subgroups=None,
               chunks_ordering='minimize gaps', sets_ordering=None,
               reverse_chunks_order=True, reverse_sets_order=True,
               max_bruteforce_size=DEFAULT_MAX_BRUTEFORCE_SIZE, seeds=DEFAULT_SEEDS, noise_prob=DEFAULT_NOISE_PROB,
               side_plot_width=1, min_width_for_annotation=1, widths_minmax_ratio=None, side_plot_color='gray',
-              dpi=None, ax=None, **kw):
+              dpi=None, ax=None, xlabel='ITEMS',ylabel='SETS',widths_minmax_equate=True, auto_color=True,**kw):
     """
     Plot a diagram visualizing relationship of multiple sets.
     :param sets: list of sets
@@ -378,9 +479,11 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
     :param side_plot_color: color of bars in side plots, default 'gray'
     :param dpi: figure DPI
     :param ax: axis to plot into. If ax is specified, figsize and dpi will be ignored.
+    :param xlabel: label of x axis
     :param min_width_for_annotation: for horizontal plot, don't annotate bars of widths less than this value (to avoid
     clutter)
     :param widths_minmax_ratio: desired max/min ratio of displayed chunk widths, default None (show actual widths)
+    :param widths_minmax_equate: if true, make all chunks the same size. widths_minmax_ratio will be overridden, default True
     :param rotate_col_annotations: True / False, whether to print annotations vertically
     :param fontsize: font size for all text elements
     :param row_annotations_y: a number in (0, 1), position for row annotations in the row. Default 0.5 - center of row.
@@ -391,7 +494,8 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
     :param bar_alpha: alpha for cell fills.
     :param bar_align: vertical alignment of bars, 'edge' (default) or 'center'. Only matters when bar_height < 1.
     :param color_cycle: a list of set colors, given as names of matplotlib named colors, or hex codes (e.g. '#1f77b4')
-    :param alternating_background: True (default) / False - give avery second row a slight grey tint
+    :param auto_color: automatically generate a list of colors. overwrites color_cycle
+    :param alternating_background: True / False (default) - give avery second row a slight grey tint
 
     :return: SupervennPlot instance with attributes `axes`, `figure`, `chunks`
         and method `get_chunk(set_indices)`. See docstring to returned object.
@@ -409,12 +513,13 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
             '    supervenn(sets, ax=my_axis)\n'
         )
 
-    axes = setup_axes(side_plots, figsize, dpi, ax, side_plot_width)
+    axes = setup_axes(side_plots, figsize, dpi, ax, side_plot_width, subgroups=(subgroups is not None))
 
     if set_annotations is None:
         set_annotations = ['Set_{}'.format(i) for i in range(len(sets))]
 
     chunks, composition_array = get_chunks_and_composition_array(sets)
+    
 
     # Find permutations of rows and columns
     permutations_ = get_permutations(
@@ -428,14 +533,32 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
         seeds=seeds,
         noise_prob=noise_prob)
 
+            
+            
     # Apply permutations
     chunks = [chunks[i] for i in permutations_['chunks_ordering']]
     composition_array = composition_array[:, permutations_['chunks_ordering']]
     composition_array = composition_array[permutations_['sets_ordering'], :]
     set_annotations = [set_annotations[i] for i in permutations_['sets_ordering']]
 
+
+    print(chunks)
+    print(composition_array)
+    print(permutations_)    
+    if subgroups is not None:
+        right_subgroups = {}
+        # expect dict
+        for subgroup_name, subgroup_ids in subgroups.items():
+            temp_chunks = [len(chunk.intersection(subgroup_ids)) for chunk in chunks]
+            right_subgroups[subgroup_name] = list(np.dot(np.array(composition_array), temp_chunks))
+        print(right_subgroups)
+            
+
     # Main plot
     chunk_sizes = [len(chunk) for chunk in chunks]
+    
+    if widths_minmax_equate:
+        widths_minmax_ratio = 1-min(chunk_sizes)/max(chunk_sizes)
 
     if widths_minmax_ratio is not None:
         widths_balancer = get_widths_balancer(chunk_sizes, widths_minmax_ratio)
@@ -445,6 +568,12 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
         col_widths = chunk_sizes
         effective_min_width_for_annotation = min_width_for_annotation
 
+    if auto_color:
+        # overwrite kw. not best, but works for now
+        cmap = ucla_colorgradient(n=max(chunk_sizes))
+        color_cycle = [cmap[chunk_size-1] for chunk_size in chunk_sizes]
+        kw['color_cycle']= color_cycle
+    
     plot_binary_array(
         arr=composition_array,
         row_annotations=set_annotations,
@@ -457,8 +586,8 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
     xlim = axes['main'].get_xlim()
     ylim = axes['main'].get_ylim()
     fontsize = kw.get('fontsize', DEFAULT_FONTSIZE)
-    plt.xlabel('ITEMS', fontsize=fontsize)
-    plt.ylabel('SETS', fontsize=fontsize)
+    plt.xlabel(xlabel, fontsize=fontsize)
+    plt.ylabel(ylabel, fontsize=fontsize)
 
     # Side plots
 
@@ -474,6 +603,13 @@ def supervenn(sets, set_annotations=None, figsize=None, side_plots=True,
         side_plot([len(sets[i]) for i in permutations_['sets_ordering']], [1] * len(sets), 'v', color=side_plot_color,
                   fontsize=fontsize)
         plt.ylim(ylim)
-
+        
+    if 'right_sub_plot' in axes:
+        plt.sca(axes['right_sub_plot'])
+        sub_plot(right_subgroups, [1] * len(sets), 'v', color=side_plot_color,
+                  fontsize=fontsize)
+        plt.ylim(ylim)
+        
+    
     plt.sca(axes['main'])
     return SupervennPlot(axes, plt.gcf(), break_into_chunks(sets))  # todo: break_into_chunks is called twice, fix
