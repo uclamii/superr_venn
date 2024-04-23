@@ -127,7 +127,7 @@ import warnings
 
 import numpy as np
 
-HUGE_NUMBER = 1e10 # can fail for weighted! FIXME
+HUGE_NUMBER = 1e10  # can fail for weighted! FIXME
 DEFAULT_MAX_BRUTEFORCE_SIZE = 8
 BRUTEFORCE_SIZE_HARD_LIMIT = 12
 DEFAULT_SEEDS = 10000
@@ -147,19 +147,25 @@ def get_total_gaps_in_rows(arr, row_weights=None):
     if row_weights is None:
         row_weights = np.ones(len(arr), dtype=int)
     if len(arr) != len(row_weights):
-        raise ValueError('len(row_weights) == {} != {} == len(arr)'.format(len(row_weights), len(arr)))
+        raise ValueError(
+            "len(row_weights) == {} != {} == len(arr)".format(
+                len(row_weights), len(arr)
+            )
+        )
 
     arr = arr.astype(bool)
 
     # Shift array to the left, dropping last column and appending column of zeros on the left.
-    shifted_arr = np.concatenate([np.zeros(len(arr), dtype=bool).reshape((-1, 1)), arr[:, :-1]], 1)
+    shifted_arr = np.concatenate(
+        [np.zeros(len(arr), dtype=bool).reshape((-1, 1)), arr[:, :-1]], 1
+    )
     rowwise_runs_counts = (arr & (~shifted_arr)).sum(1)
     rowwise_gaps_counts = np.maximum(rowwise_runs_counts - 1, 0)
 
     return rowwise_gaps_counts.dot(row_weights)
 
 
-def break_into_chunks(sets):
+def break_into_chunks(sets, universe=None):
     """
     Let us have a collection {S_1, ..., S_n} of finite sets and U be the union of all these sets.
     For a given subset C = {i_1, ..., i_k} of indices {1, ..., n}, define the 'chunk', corresponding to C, as the set
@@ -173,15 +179,16 @@ def break_into_chunks(sets):
     This function takes a list of sets as its only argument and returns a dict with frozensets of indices as keys and
     chunks as values.
     :param sets: list of sets
+    :param universe: set of all possible elements
     :return: chunks_dict - dict with frozensets as keys and sets as values.
     """
     if not sets:
-        raise ValueError('Sets list is empty.')
+        raise ValueError("Sets list is empty.")
 
     all_items = set.union(*sets)
 
     if not all_items:
-        raise ValueError('All sets are empty')
+        raise ValueError("All sets are empty")
 
     # Each chunk is characterized by its occurrence pattern, which is a unique subset of indices of our sets.
     # E.g. chunk with signature {1, 2, 5} is exactly the set of items such that they belong to sets 1, 2, 5, and
@@ -189,21 +196,33 @@ def break_into_chunks(sets):
     # Build a dict with signatures as keys (as frozensets), and lists of items as values,
     chunks_dict = defaultdict(set)
     for item in all_items:
-        occurrence_pattern = frozenset({i for i, set_ in enumerate(sets) if item in set_})
+        occurrence_pattern = frozenset(
+            {i for i, set_ in enumerate(sets) if item in set_}
+        )
         chunks_dict[occurrence_pattern].add(item)
+
+    if universe is not None and len(universe) > 0:
+        if all_items <= universe:
+            chunks_dict[frozenset({})] = universe.difference(all_items)
+        else:
+            print(
+                "Universe does not contain all elements. Skipping universe implementation"
+            )
+
     return dict(chunks_dict)
 
 
-def get_chunks_and_composition_array(sets):
+def get_chunks_and_composition_array(sets, universe=None):
     """
     Take
     - list of all chunks (each chunk is a set of items)
     - a numpy.array A of zeros and ones with len(sets) rows and len(chunks) columns,
     where A[i, j] == 1 <=> sets[i] includes chunks[j].
     :param sets: list of sets
+    :param universe: set of all possible elements
     :return: chunks - list of sets, arr - numpy.array, chunks_dict - dict w
     """
-    chunks_dict = break_into_chunks(sets)
+    chunks_dict = break_into_chunks(sets, universe=universe)
     chunks_count = len(chunks_dict)
     chunks = []
     arr = np.zeros((len(sets), chunks_count), dtype=int)
@@ -224,12 +243,17 @@ def find_best_columns_permutation_bruteforce(arr, row_weights=None):
     :return: optimal permutation as a list of column indices.
     """
     if arr.shape[1] > BRUTEFORCE_SIZE_HARD_LIMIT:
-        raise ValueError('Bruteforce ordering method accepts max {} columns, got {} instead. It would take too long.'
-                         .format(BRUTEFORCE_SIZE_HARD_LIMIT, arr.shape[1]))
+        raise ValueError(
+            "Bruteforce ordering method accepts max {} columns, got {} instead. It would take too long.".format(
+                BRUTEFORCE_SIZE_HARD_LIMIT, arr.shape[1]
+            )
+        )
     best_permutation = None
     best_total_gaps = HUGE_NUMBER
     for permutation in permutations(range(arr.shape[1])):
-        total_gaps = get_total_gaps_in_rows(arr[:, permutation], row_weights=row_weights)
+        total_gaps = get_total_gaps_in_rows(
+            arr[:, permutation], row_weights=row_weights
+        )
         if total_gaps < best_total_gaps:
             best_permutation = permutation
             best_total_gaps = total_gaps
@@ -252,7 +276,7 @@ def columns_similarities_matrix(arr, row_weights=None):
     if row_weights is None:
         row_weights = np.ones(len(arr), dtype=int)
     if len(arr) != len(row_weights):
-        raise ValueError('len(row_weights) must be equal to number of rows of arr')
+        raise ValueError("len(row_weights) must be equal to number of rows of arr")
 
     return (arr.T * row_weights).dot(arr) + ((1 - arr).T * row_weights).dot(1 - arr)
 
@@ -279,7 +303,9 @@ def find_columns_permutation_greedily(similarities):
     placed_flags = np.zeros(ncols, dtype=int)
 
     # find two most similar columns. Initialize two lists with tham.
-    first_col_index, second_col_index = np.unravel_index(similarities.argmax(), similarities.shape)
+    first_col_index, second_col_index = np.unravel_index(
+        similarities.argmax(), similarities.shape
+    )
     first_tail = [first_col_index]
     second_tail = [second_col_index]
     placed_flags[first_col_index] = 1
@@ -288,8 +314,12 @@ def find_columns_permutation_greedily(similarities):
     # the main greedy loop
     for _ in range(ncols - 2):
         # find column most similar to the last element of any of the two lists, append it to the corresponding list
-        similarities_to_first = similarities[:, first_tail[-1]] - placed_flags * HUGE_NUMBER
-        similarities_to_second = similarities[:, second_tail[-1]] - placed_flags * HUGE_NUMBER
+        similarities_to_first = (
+            similarities[:, first_tail[-1]] - placed_flags * HUGE_NUMBER
+        )
+        similarities_to_second = (
+            similarities[:, second_tail[-1]] - placed_flags * HUGE_NUMBER
+        )
         first_argmax = similarities_to_first.argmax()
         second_argmax = similarities_to_second.argmax()
         if similarities_to_first[first_argmax] >= similarities_to_second[second_argmax]:
@@ -321,7 +351,9 @@ def run_greedy_algorithm_on_composition_array(arr, row_weights=None):
 
 
 # todo rename to reflect what it does, not only how it does it
-def run_randomized_greedy_algorithm(arr, row_weights=None, seeds=DEFAULT_SEEDS, noise_prob=DEFAULT_NOISE_PROB):
+def run_randomized_greedy_algorithm(
+    arr, row_weights=None, seeds=DEFAULT_SEEDS, noise_prob=DEFAULT_NOISE_PROB
+):
     """
     For a 2D np.array arr, find a permutation of columns that approximately minimizes the row-weighted number of gaps in
     the rows of the permuted array. An approximate randomized greedy algorithm is used.
@@ -347,7 +379,9 @@ def run_randomized_greedy_algorithm(arr, row_weights=None, seeds=DEFAULT_SEEDS, 
             noise = np.zeros_like(similarities)
         else:
             np.random.seed(seed)
-            noise = (np.random.uniform(0, 1, size=similarities.shape) < noise_prob).astype(int)
+            noise = (
+                np.random.uniform(0, 1, size=similarities.shape) < noise_prob
+            ).astype(int)
             np.random.seed(datetime.datetime.now().microsecond)
 
         np.fill_diagonal(noise, 0)
@@ -364,10 +398,17 @@ def run_randomized_greedy_algorithm(arr, row_weights=None, seeds=DEFAULT_SEEDS, 
     return best_found_permutation
 
 
-def get_permutations(chunks, composition_array, chunks_ordering='minimize gaps', sets_ordering=None,
-                     reverse_chunks_order=True, reverse_sets_order=True,
-                     max_bruteforce_size=DEFAULT_MAX_BRUTEFORCE_SIZE,
-                     seeds=DEFAULT_SEEDS, noise_prob=DEFAULT_NOISE_PROB):
+def get_permutations(
+    chunks,
+    composition_array,
+    chunks_ordering="minimize gaps",
+    sets_ordering=None,
+    reverse_chunks_order=True,
+    reverse_sets_order=True,
+    max_bruteforce_size=DEFAULT_MAX_BRUTEFORCE_SIZE,
+    seeds=DEFAULT_SEEDS,
+    noise_prob=DEFAULT_NOISE_PROB,
+):
     """
     Given chunks and composition array, get permutations which will order the chunks and the sets according to specified
     ordering methods.
@@ -379,58 +420,72 @@ def get_permutations(chunks, composition_array, chunks_ordering='minimize gaps',
     set_sizes = composition_array.dot(np.array(chunk_sizes))
 
     chunks_case = {
-        'sizes': chunk_sizes,
-        'param': 'chunks_ordering',
-        'array': composition_array,
-        'row_weights': None,
-        'ordering': chunks_ordering,
-        'allowed_orderings': ['size', 'occurrence', 'random', 'minimize gaps'] + ['occurence'],  # todo remove with typo
-        'reverse': reverse_chunks_order
+        "sizes": chunk_sizes,
+        "param": "chunks_ordering",
+        "array": composition_array,
+        "row_weights": None,
+        "ordering": chunks_ordering,
+        "allowed_orderings": ["size", "occurrence", "random", "minimize gaps"]
+        + ["occurence"],  # todo remove with typo
+        "reverse": reverse_chunks_order,
     }
 
-    if chunks_ordering == 'occurence':
-        warnings.warn('Please use chunks_ordering="occurrence" (with double "r") instead of "occurence" (spelling fixed'
-                      'in 0.3.0). The incorrect variant is still supported, but will be removed in a future version')
+    if chunks_ordering == "occurence":
+        warnings.warn(
+            'Please use chunks_ordering="occurrence" (with double "r") instead of "occurence" (spelling fixed'
+            "in 0.3.0). The incorrect variant is still supported, but will be removed in a future version"
+        )
 
     sets_case = {
-        'sizes': set_sizes,
-        'param': 'sets_ordering',
-        'array': composition_array.T,
-        'row_weights': chunk_sizes,
-        'ordering': sets_ordering,
-        'allowed_orderings': ['size', 'chunk count', 'random', 'minimize gaps', None],
-        'reverse': reverse_sets_order
+        "sizes": set_sizes,
+        "param": "sets_ordering",
+        "array": composition_array.T,
+        "row_weights": chunk_sizes,
+        "ordering": sets_ordering,
+        "allowed_orderings": ["size", "chunk count", "random", "minimize gaps", None],
+        "reverse": reverse_sets_order,
     }
 
     permutations_ = {}
 
     for case in chunks_case, sets_case:
-        if case['ordering'] not in case['allowed_orderings']:
-            raise ValueError('Unknown {}: {} (should be one of {})'
-                             .format(case['param'], case['ordering'], case['allowed_orderings']))
+        if case["ordering"] not in case["allowed_orderings"]:
+            raise ValueError(
+                "Unknown {}: {} (should be one of {})".format(
+                    case["param"], case["ordering"], case["allowed_orderings"]
+                )
+            )
 
-        if case['ordering'] == 'size':
-            permutation = np.argsort(case['sizes'])
-        elif case['ordering'] in ['occurrence', 'chunk count'] + ['occurence']:
-            permutation = np.argsort(case['array'].sum(0))
-        elif case['ordering'] == 'random':
-            permutation = np.array(range(len(case['sizes'])))
+        if case["ordering"] == "size":
+            permutation = np.argsort(case["sizes"])
+        elif case["ordering"] in ["occurrence", "chunk count"] + ["occurence"]:
+            permutation = np.argsort(case["array"].sum(0))
+        elif case["ordering"] == "random":
+            permutation = np.array(range(len(case["sizes"])))
             np.random.shuffle(permutation)
-        elif case['ordering'] is None:
-            permutation = np.array(range(len(case['sizes'])))
-        elif case['ordering'] == 'minimize gaps':
-            if len(case['sizes']) <= min(max_bruteforce_size, BRUTEFORCE_SIZE_HARD_LIMIT):
-                permutation = find_best_columns_permutation_bruteforce(case['array'], row_weights=case['row_weights'])
+        elif case["ordering"] is None:
+            permutation = np.array(range(len(case["sizes"])))
+        elif case["ordering"] == "minimize gaps":
+            if len(case["sizes"]) <= min(
+                max_bruteforce_size, BRUTEFORCE_SIZE_HARD_LIMIT
+            ):
+                permutation = find_best_columns_permutation_bruteforce(
+                    case["array"], row_weights=case["row_weights"]
+                )
             else:
-                permutation = run_randomized_greedy_algorithm(case['array'], seeds=seeds, noise_prob=noise_prob,
-                                                              row_weights=case['row_weights'])
+                permutation = run_randomized_greedy_algorithm(
+                    case["array"],
+                    seeds=seeds,
+                    noise_prob=noise_prob,
+                    row_weights=case["row_weights"],
+                )
         else:
-            raise ValueError(case['ordering'])
+            raise ValueError(case["ordering"])
 
-        if case['ordering'] is not None and case['reverse']:
+        if case["ordering"] is not None and case["reverse"]:
             permutation = permutation[::-1]
 
-        permutations_[case['param']] = permutation
+        permutations_[case["param"]] = permutation
 
     return permutations_
 
@@ -446,8 +501,10 @@ def _get_ordered_chunks_and_composition_array(sets, **kwargs):
 
     permutations_ = get_permutations(chunks, composition_array, **kwargs)
 
-    ordered_chunks = [chunks[i] for i in permutations_['chunks_ordering']]
-    ordered_composition_array = composition_array[:, permutations_['chunks_ordering']]
-    ordered_composition_array = ordered_composition_array[permutations_['sets_ordering'], :]
+    ordered_chunks = [chunks[i] for i in permutations_["chunks_ordering"]]
+    ordered_composition_array = composition_array[:, permutations_["chunks_ordering"]]
+    ordered_composition_array = ordered_composition_array[
+        permutations_["sets_ordering"], :
+    ]
 
     return ordered_chunks, ordered_composition_array
