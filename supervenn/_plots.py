@@ -540,6 +540,7 @@ def supervenn(
     ylabel="SETS",
     widths_minmax_equate=True,
     auto_color=True,
+    log_color=False,
     **kw
 ):
     """
@@ -661,6 +662,15 @@ def supervenn(
                 relevant_chunk_sizes.append(len(chunk))
             else:
                 relevant_chunk_sizes.append(0)
+
+        if log_color:
+            relevant_chunk_sizes = np.array(relevant_chunk_sizes)
+            relevant_chunk_sizes = np.round(
+                np.where(
+                    relevant_chunk_sizes != 0, np.log2(relevant_chunk_sizes) + 1, 0
+                ),
+                0,
+            ).astype(int)
 
         cmap = ucla_colorgradient(n=max(relevant_chunk_sizes))
         color_cycle = [cmap[chunk_size - 1] for chunk_size in relevant_chunk_sizes]
@@ -796,21 +806,21 @@ def comparevenn(
 
     # iterate over columns
     for idx in range(complete_set.composition_array.shape[1]):
-        
+
         # get the sets for the column
         list_chunk_idx = np.nonzero(complete_set.composition_array[:, idx])[0]
         chunk_idx = frozenset(list_chunk_idx)
 
         # get the number of elements in the set
         if chunk_idx in subgroup_set_0.chunks_dict:
-            norm_composition_array_0[list(list_chunk_idx), idx] = (
-                len(subgroup_set_0.chunks_dict[chunk_idx])
+            norm_composition_array_0[list(list_chunk_idx), idx] = len(
+                subgroup_set_0.chunks_dict[chunk_idx]
             )
 
         # get the number of elements in the set
         if chunk_idx in subgroup_set_1.chunks_dict:
-            norm_composition_array_1[list(list_chunk_idx), idx] = (
-                len(subgroup_set_1.chunks_dict[chunk_idx])
+            norm_composition_array_1[list(list_chunk_idx), idx] = len(
+                subgroup_set_1.chunks_dict[chunk_idx]
             )
 
         # store the binary set
@@ -843,12 +853,12 @@ def comparevenn(
 
     if auto_color:
         # overwrite kw. not best, but works for now
-        
+
         # Make all rows percentages
         count_composition_array = np.round(
             count_composition_array
             / np.sum(count_composition_array, axis=1)[:, None]
-            * 100  
+            * 100
         ).astype(int)
 
         cmap = ucla_colorgradient(n=int(np.ceil(np.max(count_composition_array) + 1)))
