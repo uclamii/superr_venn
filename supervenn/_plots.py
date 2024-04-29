@@ -541,7 +541,8 @@ def supervenn(
     widths_minmax_equate=True,
     auto_color=True,
     log_color=False,
-    **kw
+    square_cell=False,
+    **kw,
 ):
     """
     Plot a diagram visualizing relationship of multiple sets.
@@ -683,7 +684,7 @@ def supervenn(
         ax=axes["main"],
         col_widths=col_widths,
         min_width_for_annotation=effective_min_width_for_annotation,
-        **kw
+        **kw,
     )
 
     xlim = axes["main"].get_xlim()
@@ -718,6 +719,12 @@ def supervenn(
         )
         plt.ylim(ylim)
 
+    if square_cell:
+        fig = plt.gcf()
+        ratio = (len(sets) + side_plot_width) / (len(col_widths) - side_plot_width)
+        curr_size = fig.get_size_inches()
+        fig.set_size_inches(curr_size[0], curr_size[0] * ratio)
+
     plt.sca(axes["main"])
     return SupervennPlot(
         axes,
@@ -748,7 +755,8 @@ def comparevenn(
     ylabel="SETS",
     widths_minmax_equate=True,
     auto_color=True,
-    **kw
+    square_cell=False,
+    **kw,
 ):
     """
     Plot a diagram visualizing relationship of multiple sets.
@@ -881,7 +889,7 @@ def comparevenn(
         ax=axes["main"],
         col_widths=col_widths,
         min_width_for_annotation=effective_min_width_for_annotation,
-        **kw
+        **kw,
     )
 
     xlim = axes["main"].get_xlim()
@@ -914,6 +922,14 @@ def comparevenn(
             fontsize=fontsize,
         )
         plt.ylim(ylim)
+
+    if square_cell:
+        fig = plt.gcf()
+        ratio = (len(set_counts) + side_plot_width) / (
+            len(col_widths) - side_plot_width
+        )
+        curr_size = fig.get_size_inches()
+        fig.set_size_inches(curr_size[0], curr_size[0] * ratio)
 
     plt.sca(axes["main"])
     return
