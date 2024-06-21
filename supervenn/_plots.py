@@ -791,10 +791,10 @@ def supervenn(
         plt.colorbar(
             cm.ScalarMappable(norm=norm, cmap=cmap),
             cax=cbar_ax,
-            # format=StrMethodFormatter("{x:.0f}"),
+            format=StrMethodFormatter("{x:.0f}"),
         )
-        cbar_ax.yaxis.set_minor_formatter(FuncFormatter(ticks_format))
-        cbar_ax.yaxis.set_major_formatter(FuncFormatter(ticks_format))
+        # cbar_ax.yaxis.set_minor_formatter(FuncFormatter(ticks_format))
+        # cbar_ax.yaxis.set_major_formatter(FuncFormatter(ticks_format))
 
     if square_cell:
         fig = plt.gcf()
