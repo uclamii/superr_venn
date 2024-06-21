@@ -10,6 +10,9 @@ import numpy as np
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.colors as mplcolor
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import StrMethodFormatter, FuncFormatter, ScalarFormatter
+from matplotlib import cm, colors
 
 from supervenn._algorithms import (
     break_into_chunks,
@@ -402,7 +405,32 @@ def remove_ticks(ax):
     ax.set_yticks([])
 
 
-def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5):
+def ticks_format(value, index):
+    """
+    get the value and returns the value as:
+    integer: [0,99]
+    1 digit float: [0.1, 0.99]
+    n*10^m: otherwise
+    To have all the number of the same size they are all returned as latex strings
+    """
+    exp = np.floor(np.log10(value))
+    base = value / 10**exp
+    if exp >= 0:
+        return "${0:d}$".format(int(value))
+    if exp == -1:
+        return "${0:.1f}$".format(value)
+    else:
+        return "${0:d}\\times10^{{{1:d}}}$".format(int(base), int(exp))
+
+
+def setup_axes(
+    side_plots,
+    figsize=None,
+    dpi=None,
+    ax=None,
+    side_top_plot_width=1.5,
+    side_right_plot_width=1.5,
+):
     """
     Set up axes for plot and return them in a dictionary. The dictionary may include the following keys:
     - 'main': always present
@@ -438,8 +466,8 @@ def setup_axes(side_plots, figsize=None, dpi=None, ax=None, side_plot_width=1.5)
             supervenn_ax.get_figure().dpi_scale_trans.inverted()
         )
         plot_width, plot_height = bbox.width, bbox.height
-        width_ratios = [plot_width - side_plot_width, side_plot_width]
-        height_ratios = [side_plot_width, plot_height - side_plot_width]
+        width_ratios = [plot_width - side_right_plot_width, side_right_plot_width]
+        height_ratios = [side_top_plot_width, plot_height - side_top_plot_width]
         fig = supervenn_ax.get_figure()
         get_gridspec = partial(
             gridspec.GridSpecFromSubplotSpec,
@@ -530,7 +558,8 @@ def supervenn(
     max_bruteforce_size=DEFAULT_MAX_BRUTEFORCE_SIZE,
     seeds=DEFAULT_SEEDS,
     noise_prob=DEFAULT_NOISE_PROB,
-    side_plot_width=1,
+    side_top_plot_width=1,
+    side_right_plot_width=1,
     min_width_for_annotation=1,
     widths_minmax_ratio=None,
     side_plot_color="gray",
@@ -542,6 +571,10 @@ def supervenn(
     auto_color=True,
     log_color=False,
     square_cell=False,
+    side_top_plot_label="Model\nCount",
+    side_right_plot_label="Patient\nCount",
+    col_annotations_area_height=1,
+    ticks_off=False,
     **kw,
 ):
     """
@@ -608,7 +641,9 @@ def supervenn(
             "    supervenn(sets, ax=my_axis)\n"
         )
 
-    axes = setup_axes(side_plots, figsize, dpi, ax, side_plot_width)
+    axes = setup_axes(
+        side_plots, figsize, dpi, ax, side_top_plot_width, side_right_plot_width
+    )
 
     if set_annotations is None:
         set_annotations = ["set_{}".format(i) for i in range(len(sets))]
@@ -665,10 +700,15 @@ def supervenn(
                 relevant_chunk_sizes.append(0)
 
         if log_color:
-            relevant_chunk_sizes = np.array(relevant_chunk_sizes)
+            original_chunk_sizes = np.array(relevant_chunk_sizes)
+
+            # relevant_chunk_sizes = np.round(
+            #     relevant_chunk_sizes / np.max(relevant_chunk_sizes) * 255
+            # ).astype(int)
+
             relevant_chunk_sizes = np.round(
                 np.where(
-                    relevant_chunk_sizes != 0, np.log2(relevant_chunk_sizes) + 1, 0
+                    original_chunk_sizes != 0, np.log2(original_chunk_sizes) + 1, 0
                 ),
                 0,
             ).astype(int)
@@ -707,6 +747,7 @@ def supervenn(
             fontsize=fontsize,
         )
         plt.xlim(xlim)
+        plt.ylabel(side_top_plot_label, fontsize=fontsize)
 
     if "right_side_plot" in axes:
         plt.sca(axes["right_side_plot"])
@@ -718,12 +759,55 @@ def supervenn(
             fontsize=fontsize,
         )
         plt.ylim(ylim)
+        axes["right_side_plot"].xaxis.set_label_position("top")
+        plt.xlabel(side_right_plot_label, fontsize=fontsize)
+
+    if log_color:
+        cmap = LinearSegmentedColormap.from_list("temp", cmap, N=256)
+        norm = colors.LogNorm(1, max(original_chunk_sizes))
+        fig = plt.gcf()
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.825, 0.1, 0.01, 0.7])
+        # cbar_ax.axis("off")
+
+        plt.colorbar(
+            cm.ScalarMappable(norm=norm, cmap=cmap),
+            cax=cbar_ax,
+        )
+
+        cbar_ax.yaxis.set_minor_formatter(FuncFormatter(ticks_format))
+        cbar_ax.yaxis.set_major_formatter(FuncFormatter(ticks_format))
+        if ticks_off:
+            cbar_ax.minorticks_off()
+
+    else:
+        cmap = LinearSegmentedColormap.from_list("temp", cmap, N=256)
+        norm = colors.Normalize(1, max(relevant_chunk_sizes))
+        fig = plt.gcf()
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.825, 0.1, 0.01, 0.7])
+        # cbar_ax.axis("off")
+
+        plt.colorbar(
+            cm.ScalarMappable(norm=norm, cmap=cmap),
+            cax=cbar_ax,
+            # format=StrMethodFormatter("{x:.0f}"),
+        )
+        cbar_ax.yaxis.set_minor_formatter(FuncFormatter(ticks_format))
+        cbar_ax.yaxis.set_major_formatter(FuncFormatter(ticks_format))
 
     if square_cell:
         fig = plt.gcf()
-        ratio = (len(sets) + side_plot_width) / (len(col_widths) - side_plot_width)
         curr_size = fig.get_size_inches()
-        fig.set_size_inches(curr_size[0], curr_size[0] * ratio)
+        ratio = (
+            (curr_size[0]) * len(sets)
+            + len(col_widths) * (side_top_plot_width)
+            - len(sets) * side_right_plot_width
+        ) / ((curr_size[0]) * (len(col_widths)))
+        fig.set_size_inches(
+            curr_size[0],
+            curr_size[0] * ratio,
+        )
 
     plt.sca(axes["main"])
     return SupervennPlot(
@@ -745,7 +829,8 @@ def comparevenn(
     set_annotations=None,
     figsize=None,
     side_plots=True,
-    side_plot_width=1,
+    side_top_plot_width=1,
+    side_right_plot_width=1,
     min_width_for_annotation=1,
     widths_minmax_ratio=None,
     side_plot_color="gray",
@@ -756,6 +841,9 @@ def comparevenn(
     widths_minmax_equate=True,
     auto_color=True,
     square_cell=False,
+    side_top_plot_label="Model\nCount",
+    side_right_plot_label="Odds\nRatio",
+    col_annotations_area_height=1,
     **kw,
 ):
     """
@@ -804,7 +892,9 @@ def comparevenn(
             "    supervenn(sets, ax=my_axis)\n"
         )
 
-    axes = setup_axes(side_plots, figsize, dpi, ax, side_plot_width)
+    axes = setup_axes(
+        side_plots, figsize, dpi, ax, side_top_plot_width, side_right_plot_width
+    )
 
     # Use to align the subgroup arrays with the original
     composition_array = np.zeros_like(complete_set.composition_array)
@@ -862,6 +952,8 @@ def comparevenn(
     if auto_color:
         # overwrite kw. not best, but works for now
 
+        original_count_composition_array = count_composition_array
+
         # Make all rows percentages
         count_composition_array = np.round(
             count_composition_array
@@ -911,6 +1003,7 @@ def comparevenn(
             fontsize=fontsize,
         )
         plt.xlim(xlim)
+        plt.ylabel(side_top_plot_label, fontsize=fontsize)
 
     if "right_side_plot" in axes:
         plt.sca(axes["right_side_plot"])
@@ -922,13 +1015,30 @@ def comparevenn(
             fontsize=fontsize,
         )
         plt.ylim(ylim)
+        axes["right_side_plot"].xaxis.set_label_position("top")
+        plt.xlabel(side_right_plot_label, fontsize=fontsize)
+
+    cmap = LinearSegmentedColormap.from_list("temp", cmap, N=256)
+    norm = colors.Normalize(0, np.max(original_count_composition_array))
+    fig = plt.gcf()
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.825, 0.1, 0.01, 0.7])
+    # cbar_ax.axis("off")
+
+    plt.colorbar(
+        cm.ScalarMappable(norm=norm, cmap=cmap),
+        cax=cbar_ax,
+        format=StrMethodFormatter("{x:.2f}"),
+    )
 
     if square_cell:
         fig = plt.gcf()
-        ratio = (len(set_counts) + side_plot_width) / (
-            len(col_widths) - side_plot_width
-        )
         curr_size = fig.get_size_inches()
+        ratio = (
+            (curr_size[0]) * len(set_counts)
+            + len(col_widths) * (side_top_plot_width)
+            - len(set_counts) * side_right_plot_width
+        ) / ((curr_size[0]) * (len(col_widths)))
         fig.set_size_inches(curr_size[0], curr_size[0] * ratio)
 
     plt.sca(axes["main"])
