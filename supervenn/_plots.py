@@ -785,7 +785,7 @@ def supervenn(
         norm = colors.Normalize(1, max(relevant_chunk_sizes))
         fig = plt.gcf()
         fig.subplots_adjust(right=0.8)
-        cbar_ax = fig.add_axes([0.825, 0.1, 0.01, 0.7])
+        cbar_ax = fig.add_axes([0.825, 0.2, 0.01, 0.7])
         # cbar_ax.axis("off")
 
         plt.colorbar(
