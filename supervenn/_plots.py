@@ -767,7 +767,7 @@ def supervenn(
         norm = colors.LogNorm(1, max(original_chunk_sizes))
         fig = plt.gcf()
         fig.subplots_adjust(right=0.8)
-        cbar_ax = fig.add_axes([0.825, 0.1, 0.01, 0.7])
+        cbar_ax = fig.add_axes([0.825, 0.2, 0.01, 0.6])
         # cbar_ax.axis("off")
 
         plt.colorbar(
@@ -1022,7 +1022,7 @@ def comparevenn(
     norm = colors.Normalize(0, np.max(original_count_composition_array))
     fig = plt.gcf()
     fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.825, 0.1, 0.01, 0.7])
+    cbar_ax = fig.add_axes([0.825, 0.2, 0.01, 0.6])
     # cbar_ax.axis("off")
 
     plt.colorbar(
