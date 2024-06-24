@@ -769,9 +769,9 @@ def supervenn(
         plt.tight_layout(pad=0)
         fig = plt.gcf()
         curr_size = fig.get_size_inches()
-        # fig.subplots_adjust(right=0.8)
+        fig.subplots_adjust(right=0.9)
         cbar_ax = fig.add_axes(
-            [1.0 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6]
+            [0.9 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6]
         )
         # cbar_ax.axis("off")
 
@@ -793,9 +793,9 @@ def supervenn(
         fig = plt.gcf()
         curr_size = fig.get_size_inches()
 
-        # fig.subplots_adjust(right=0.8)
+        fig.subplots_adjust(right=0.9)
         cbar_ax = fig.add_axes(
-            [1.0 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6]
+            [0.9 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6]
         )
 
         plt.colorbar(
@@ -811,9 +811,9 @@ def supervenn(
         fig = plt.gcf()
         curr_size = fig.get_size_inches()
         ratio = (
-            (curr_size[0]) * len(sets)
+            (curr_size[0] * 0.85) * len(sets)
             + len(col_widths) * (side_top_plot_width)
-            - len(sets) * (side_right_plot_width + 0.35)
+            - len(sets) * (side_right_plot_width)
         ) / ((curr_size[0]) * (len(col_widths)))
         fig.set_size_inches(
             curr_size[0],
@@ -1035,8 +1035,8 @@ def comparevenn(
     fig = plt.gcf()
     curr_size = fig.get_size_inches()
 
-    # fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([1.0 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6])
+    fig.subplots_adjust(right=0.9)
+    cbar_ax = fig.add_axes([0.9 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6])
 
     plt.colorbar(
         cm.ScalarMappable(norm=norm, cmap=cmap),
@@ -1049,7 +1049,7 @@ def comparevenn(
         fig = plt.gcf()
         curr_size = fig.get_size_inches()
         ratio = (
-            (curr_size[0]) * len(set_counts)
+            (curr_size[0] * 0.85) * len(set_counts)
             + len(col_widths) * (side_top_plot_width)
             - len(set_counts) * (side_right_plot_width)
         ) / ((curr_size[0]) * (len(col_widths)))
