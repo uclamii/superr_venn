@@ -572,9 +572,10 @@ def supervenn(
     log_color=False,
     square_cell=False,
     side_top_plot_label="Model\nCount",
-    side_right_plot_label="Patient\nCount",
-    col_annotations_area_height=1,
+    side_right_plot_label="Total\nPatient\nCount",
+    cbar_label="Number of Incorrectly\nClassified Patients",
     ticks_off=False,
+    # col_annotations_area_height=0.75,
     **kw,
 ):
     """
@@ -765,14 +766,19 @@ def supervenn(
     if log_color:
         cmap = LinearSegmentedColormap.from_list("temp", cmap, N=256)
         norm = colors.LogNorm(1, max(original_chunk_sizes))
+        plt.tight_layout(pad=0)
         fig = plt.gcf()
-        fig.subplots_adjust(right=0.8)
-        cbar_ax = fig.add_axes([0.825, 0.2, 0.01, 0.6])
+        curr_size = fig.get_size_inches()
+        # fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes(
+            [1.0 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6]
+        )
         # cbar_ax.axis("off")
 
         plt.colorbar(
             cm.ScalarMappable(norm=norm, cmap=cmap),
             cax=cbar_ax,
+            label=cbar_label,
         )
 
         cbar_ax.yaxis.set_minor_formatter(FuncFormatter(ticks_format))
@@ -783,15 +789,20 @@ def supervenn(
     else:
         cmap = LinearSegmentedColormap.from_list("temp", cmap, N=256)
         norm = colors.Normalize(1, max(relevant_chunk_sizes))
+        plt.tight_layout(pad=0)
         fig = plt.gcf()
-        fig.subplots_adjust(right=0.8)
-        cbar_ax = fig.add_axes([0.825, 0.2, 0.01, 0.6])
-        # cbar_ax.axis("off")
+        curr_size = fig.get_size_inches()
+
+        # fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes(
+            [1.0 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6]
+        )
 
         plt.colorbar(
             cm.ScalarMappable(norm=norm, cmap=cmap),
             cax=cbar_ax,
             format=StrMethodFormatter("{x:.0f}"),
+            label=cbar_label,
         )
         # cbar_ax.yaxis.set_minor_formatter(FuncFormatter(ticks_format))
         # cbar_ax.yaxis.set_major_formatter(FuncFormatter(ticks_format))
@@ -802,7 +813,7 @@ def supervenn(
         ratio = (
             (curr_size[0]) * len(sets)
             + len(col_widths) * (side_top_plot_width)
-            - len(sets) * side_right_plot_width
+            - len(sets) * (side_right_plot_width + 0.35)
         ) / ((curr_size[0]) * (len(col_widths)))
         fig.set_size_inches(
             curr_size[0],
@@ -842,8 +853,8 @@ def comparevenn(
     auto_color=True,
     square_cell=False,
     side_top_plot_label="Model\nCount",
-    side_right_plot_label="Odds\nRatio",
-    col_annotations_area_height=1,
+    side_right_plot_label="Total\nOdds Ratio",
+    cbar_label="Odds Ratio Contribution",
     **kw,
 ):
     """
@@ -1020,15 +1031,18 @@ def comparevenn(
 
     cmap = LinearSegmentedColormap.from_list("temp", cmap, N=256)
     norm = colors.Normalize(0, np.max(original_count_composition_array))
+    plt.tight_layout(pad=0)
     fig = plt.gcf()
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.825, 0.2, 0.01, 0.6])
-    # cbar_ax.axis("off")
+    curr_size = fig.get_size_inches()
+
+    # fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([1.0 + 0.25 / curr_size[0], 0.2, 0.1 / curr_size[0], 0.6])
 
     plt.colorbar(
         cm.ScalarMappable(norm=norm, cmap=cmap),
         cax=cbar_ax,
         format=StrMethodFormatter("{x:.2f}"),
+        label=cbar_label,
     )
 
     if square_cell:
@@ -1037,7 +1051,7 @@ def comparevenn(
         ratio = (
             (curr_size[0]) * len(set_counts)
             + len(col_widths) * (side_top_plot_width)
-            - len(set_counts) * side_right_plot_width
+            - len(set_counts) * (side_right_plot_width)
         ) / ((curr_size[0]) * (len(col_widths)))
         fig.set_size_inches(curr_size[0], curr_size[0] * ratio)
 
