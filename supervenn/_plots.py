@@ -966,10 +966,14 @@ def comparevenn(
         original_count_composition_array = count_composition_array
 
         # Make all rows percentages
+        # count_composition_array = np.round(
+        #     count_composition_array
+        #     / np.sum(count_composition_array, axis=1)[:, None]
+        #     * 100
+        # ).astype(int)
+        # Rescaling
         count_composition_array = np.round(
-            count_composition_array
-            / np.sum(count_composition_array, axis=1)[:, None]
-            * 100
+            count_composition_array / np.max(count_composition_array) * 100
         ).astype(int)
 
         cmap = ucla_colorgradient(n=int(np.ceil(np.max(count_composition_array) + 1)))
@@ -985,10 +989,11 @@ def comparevenn(
 
         kw["color_cycle"] = color_cycle
 
+    col_annotations = None  # [len(chunk) for chunk in complete_set.chunks]
     plot_binary_array(
         arr=composition_array,
         row_annotations=set_annotations,
-        col_annotations=None,
+        col_annotations=col_annotations,
         ax=axes["main"],
         col_widths=col_widths,
         min_width_for_annotation=effective_min_width_for_annotation,
