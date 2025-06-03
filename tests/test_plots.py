@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import unittest
 
-from supervenn._plots import supervenn
+from superr_venn._plots import supervenn
 
 
 def rectangle_present(ax, expected_bbox_bounds):
@@ -14,7 +14,10 @@ def rectangle_present(ax, expected_bbox_bounds):
     """
     found = False
     for child in ax.get_children():
-        if isinstance(child, Rectangle) and child.get_bbox().bounds == expected_bbox_bounds:
+        if (
+            isinstance(child, Rectangle)
+            and child.get_bbox().bounds == expected_bbox_bounds
+        ):
             found = True
             break
     return found
@@ -42,10 +45,12 @@ class TestSupervenn(unittest.TestCase):
         set_size = 3
         sets = [set(range(set_size))]
         supervenn_plot = supervenn(sets, side_plots=False)
-        self.assertEqual(list(supervenn_plot.axes), ['main'])
-        self.assertEqual(len(supervenn_plot.figure.axes), 1)
+        self.assertEqual(list(supervenn_plot.axes), ["main"])
+        self.assertEqual(len(supervenn_plot.figure.axes), 2)
         expected_rectangle_bounds = (0.0, 0.0, float(set_size), 1.0)
-        self.assertTrue(rectangle_present(supervenn_plot.axes['main'], expected_rectangle_bounds))
+        self.assertTrue(
+            rectangle_present(supervenn_plot.axes["main"], expected_rectangle_bounds)
+        )
         plt.close()
 
     def test_with_side_plots(self):
@@ -56,10 +61,18 @@ class TestSupervenn(unittest.TestCase):
         set_size = 3
         sets = [set(range(set_size))]
         supervenn_plot = supervenn(sets, side_plots=True)
-        self.assertEqual(set(supervenn_plot.axes), {'main', 'right_side_plot', 'top_side_plot', 'unused'})
-        expected_rectangle_bounds = (0.0, 0.0, float(set_size), 1.0)  # same for all the three axes actually!
+        self.assertEqual(
+            set(supervenn_plot.axes),
+            {"main", "right_side_plot", "top_side_plot", "unused"},
+        )
+        expected_rectangle_bounds = (
+            0.0,
+            0.0,
+            float(set_size),
+            1.0,
+        )  # same for all the three axes actually!
         for ax_name, ax in supervenn_plot.axes.items():
-            if ax_name == 'unused':
+            if ax_name == "unused":
                 continue
             self.assertTrue(rectangle_present(ax, expected_rectangle_bounds))
         plt.close()
@@ -67,14 +80,21 @@ class TestSupervenn(unittest.TestCase):
     def test_with_one_side_plot(self):
         set_size = 3
         sets = [set(range(set_size))]
-        for side_plots in ('top', 'right'):
+        for side_plots in ("top", "right"):
             supervenn_plot = supervenn(sets, side_plots=side_plots)
-            self.assertEqual(set(supervenn_plot.axes), {'main', '{}_side_plot'.format(side_plots)})
-            expected_rectangle_bounds = (0.0, 0.0, float(set_size), 1.0)  # same for both axes
+            self.assertEqual(
+                set(supervenn_plot.axes), {"main", "{}_side_plot".format(side_plots)}
+            )
+            expected_rectangle_bounds = (
+                0.0,
+                0.0,
+                float(set_size),
+                1.0,
+            )  # same for both axes
             for ax_name, ax in supervenn_plot.axes.items():
                 self.assertTrue(rectangle_present(ax, expected_rectangle_bounds))
             plt.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

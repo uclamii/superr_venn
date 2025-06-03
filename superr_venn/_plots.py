@@ -14,7 +14,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import StrMethodFormatter, FuncFormatter, ScalarFormatter
 from matplotlib import cm, colors
 
-from supervenn._algorithms import (
+from superr_venn._algorithms import (
     break_into_chunks,
     get_chunks_and_composition_array,
     get_permutations,
