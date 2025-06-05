@@ -1,124 +1,124 @@
 # -*- coding: utf-8 -*-
 """
-    supervenn._algorithms
-    This module implements all the algorithms used to prepare data for plotting.
-    ~~~~~~~~~~~
-    A semi-formal explanation of what is going on here
-    ==================================================
+supervenn._algorithms
+This module implements all the algorithms used to prepare data for plotting.
+~~~~~~~~~~~
+A semi-formal explanation of what is going on here
+==================================================
 
-    CHUNKS
+CHUNKS
 
-    Consider a three-way Venn diagram, shown below using squares rather than the usual circles, for obvious reasons.
-    It is easy to see that the three squares S1, S2, S3 break each other into seven elementary undivided parts, which we
-    will name :chunks:. The 7 chunks are marked as ch1 - ch7.
-
-
-              *-------S1-------*
-              |                |
-              |           ch1  |
-        *-----|---------*      |
-        |     |  ch4    |      |
-        |     |         |      |
-        |     |   *-----|------|-----*
-        |     |   | ch7 | ch5  |     |
-       S2     |   |     |      |     |
-        |     *---|-----|------*     |
-        |         |     |            |
-        |  ch2    | ch6 |            S3
-        *---------|-----*            |
-                  |          ch3     |
-                  |                  |
-                  *------------------*
-
-    The number 7 is easily derived by the following simple consideration. Each chunk is defined by a unique
-    subset of {S1, S2, S3}. For example, chunk ch4 is defined by {S1, S2} - it consists of exactly the points that lie
-    inside S1 and S2, but outside of S3. So the number of chunks is 2^3 - 1, 2^3 being the number of possible subsets of
-    {S1, S2, S3}, and -1 being for the empty set which has no business being among our chunks.
-
-    Note that, depending on how the three squares are positioned, there can be less chunks then 7. For instance, if the
-    three squares are disjoint, the number of chunks will be 3, as each square will be a chunk in itself.
-
-    What is important for us about the chunks, is that they are like the elementary building blocks of our
-    configuration of squares. In other words, we can represent any of the squares as a disjoint union of some of the
-    chunks. Also any combination of the squares w.r.t. the set-theoretical operations of intersection, union and
-    difference can be represented in the same way.
-
-    Now let's move from squares on the plane to abstract finite sets. The same line of reasoning leads us to
-    the conclusion that for N sets S1, ..., SN, there exist at most 2^N - 1 chunks (sets), such that any of the sets
-    (and any combination of the sets w.r.t union, intersection and difference) can be uniquely represented as the
-    disjoint union of several of the chunks.
-
-    COMPOSITION ARRAY
-
-    Suppose we have N sets S1, ..., SN, and we have found the chunks ch1, ... chM. As we said above, each of the sets
-    can be uniquely represented as a disjoint union of some of the chunks. Suppose we have found such decompositions for
-    all of the sets.
-    Now, represent the decompositions as a N x M array of zeros and ones, where the i,j-th item is 1 <=> set S_i
-    contains chunk ch_j. We'll call this array the :composition array: of our sets.
-    For example, for the squares above, the composition array will look like this:
-
-       ch1  ch2  ch3  ch4  ch5  ch6  ch7
-    S1  1    0    0    1    1    0    1  ->  Square 1 is made up of chunks ch1, ch4, ch5 and ch7
-    S2  0    1    0    1    0    1    1
-    S3  0    0    1    0    1    1    1
-
-    Note that since chunks are something we've just made up by ourselves, they don't have to be ordered in any
-    particular way. This means that we can reorder the chunks (= the columns if the composition array) if we
-    need to.
-
-    Most part of the present module is actually about finding a permutations of the columns, that will minimize the
-    number of gaps between the 1's in all the rows of the array, so that the sets are visually broken into as few parts
-    as possible.
-
-    For the array above, we see that there are 5 total zero-filled gaps between ones: one in the first row, two in the
-    second, one in the third. But if we find and apply the right permutation of columns, we'll have only one gap between
-    the 1's in the whole array, highlighted by asterisks below:
+Consider a three-way Venn diagram, shown below using squares rather than the usual circles, for obvious reasons.
+It is easy to see that the three squares S1, S2, S3 break each other into seven elementary undivided parts, which we
+will name :chunks:. The 7 chunks are marked as ch1 - ch7.
 
 
-       ch1  ch4  ch2  ch6  ch7  ch5  ch3
-    S1  1    1   *0*   1    1    0    0
-    S2  0    1    1    1    1    0    0
-    S3  0    0    0    1    1    1    1
+          *-------S1-------*
+          |                |
+          |           ch1  |
+    *-----|---------*      |
+    |     |  ch4    |      |
+    |     |         |      |
+    |     |   *-----|------|-----*
+    |     |   | ch7 | ch5  |     |
+   S2     |   |     |      |     |
+    |     *---|-----|------*     |
+    |         |     |            |
+    |  ch2    | ch6 |            S3
+    *---------|-----*            |
+              |          ch3     |
+              |                  |
+              *------------------*
 
-    When there are few chunks (say, no more than 8) the optimal permutations is easily found in a bruteforce manner by
-    checking all the possible permutations. But for a greater number of chunks this would take too long. So instead an
-    approximate greedy algorithm with randomization is used. It is implemented in the run_randomized_greedy_algorithm()
-    function. The algorithm will be described below.
+The number 7 is easily derived by the following simple consideration. Each chunk is defined by a unique
+subset of {S1, S2, S3}. For example, chunk ch4 is defined by {S1, S2} - it consists of exactly the points that lie
+inside S1 and S2, but outside of S3. So the number of chunks is 2^3 - 1, 2^3 being the number of possible subsets of
+{S1, S2, S3}, and -1 being for the empty set which has no business being among our chunks.
 
-    REORDERING THE ROWS / SETS
+Note that, depending on how the three squares are positioned, there can be less chunks then 7. For instance, if the
+three squares are disjoint, the number of chunks will be 3, as each square will be a chunk in itself.
 
-    Unlike the order of chunks, the order of sets can be relevant in some cases. For example, our sets sets may relate
-    to different moments in time, and we may deem it important to preserve this temporal structure in the plot. But in
-    other cases when there is no inherent order to our sets, we might want to reorder the sets (rows of the composition
-    array) so that similar sets are closer to each other.
+What is important for us about the chunks, is that they are like the elementary building blocks of our
+configuration of squares. In other words, we can represent any of the squares as a disjoint union of some of the
+chunks. Also any combination of the squares w.r.t. the set-theoretical operations of intersection, union and
+difference can be represented in the same way.
 
-    This is done by running the same algorithm on the transposed array. But there is an important distinction here: the
-    chunks are of different size, and it makes more sense to minimize total gap width, instead of just gap count.
-    To allow that, the run_randomized_greedy_algorithm() function accepts an additional argument named :row_weights:,
-    and minimizes gap counts weighted with these coefficients. In other words, the minimization target becomes
-    sum_i(gaps_count_in_row[i] * row_weights[i]) instead of just sum_i(gaps_count_in_row[i]).
+Now let's move from squares on the plane to abstract finite sets. The same line of reasoning leads us to
+the conclusion that for N sets S1, ..., SN, there exist at most 2^N - 1 chunks (sets), such that any of the sets
+(and any combination of the sets w.r.t union, intersection and difference) can be uniquely represented as the
+disjoint union of several of the chunks.
 
-    DESCRIPTION OF THE ALGORITHM
+COMPOSITION ARRAY
 
-    Recall that our goal is to a find a permutation of columns of a matrix of zeros and ones, so that the row-weighted
-    sum of gaps counts in rows is as low as possible.
+Suppose we have N sets S1, ..., SN, and we have found the chunks ch1, ... chM. As we said above, each of the sets
+can be uniquely represented as a disjoint union of some of the chunks. Suppose we have found such decompositions for
+all of the sets.
+Now, represent the decompositions as a N x M array of zeros and ones, where the i,j-th item is 1 <=> set S_i
+contains chunk ch_j. We'll call this array the :composition array: of our sets.
+For example, for the squares above, the composition array will look like this:
 
-    Define similarity of two columns as the sum of row weights for rows where the values are equal in the two columns.
-    Precompute matrix of similarities of all columns (if arr has N columns, this matrix has shape N x N)
-    Find two most similar columns C1, C2, initialize two lists [C1,] and [C2,]
-    Among the remaining N-2 columns, find one that has largest similarity to either of C1 or C2. Append that column to
-    the corresponding list. E.g. we now have lists [C1, C3] and [C2,]
-    Among the remaining N-3 columns find one that has largest similarity to the last elemt of either of the lists (in
-    our example, C3 and C2). Append it to the corresponding list.
-    Continue until all columns are distributed between in two lists.
-    Finally, one of the lists is reversed and the other is concatenated to it on the right, which gives the resulting
-    permutation. This concludes the greedy algorithm.
+   ch1  ch2  ch3  ch4  ch5  ch6  ch7
+S1  1    0    0    1    1    0    1  ->  Square 1 is made up of chunks ch1, ch4, ch5 and ch7
+S2  0    1    0    1    0    1    1
+S3  0    0    1    0    1    1    1
 
-    To mitigate the greediness, the similarity matrix is perturbed by means of adding a random matrix R with
-    elements {0, noise_value} with a fixed  probability of non-zero, and the whole greedy procedure is repeated.
-    This is done with :seeds: different random matrices, and so :seeds: + 1 permutations are obtained (including the one
-    produced from the unperturbed similarities matrix). The permutation that yields the smallest value
-    of count_runs_of_ones_in_rows(arr[:, permutation]) is returned.
+Note that since chunks are something we've just made up by ourselves, they don't have to be ordered in any
+particular way. This means that we can reorder the chunks (= the columns if the composition array) if we
+need to.
+
+Most part of the present module is actually about finding a permutations of the columns, that will minimize the
+number of gaps between the 1's in all the rows of the array, so that the sets are visually broken into as few parts
+as possible.
+
+For the array above, we see that there are 5 total zero-filled gaps between ones: one in the first row, two in the
+second, one in the third. But if we find and apply the right permutation of columns, we'll have only one gap between
+the 1's in the whole array, highlighted by asterisks below:
+
+
+   ch1  ch4  ch2  ch6  ch7  ch5  ch3
+S1  1    1   *0*   1    1    0    0
+S2  0    1    1    1    1    0    0
+S3  0    0    0    1    1    1    1
+
+When there are few chunks (say, no more than 8) the optimal permutations is easily found in a bruteforce manner by
+checking all the possible permutations. But for a greater number of chunks this would take too long. So instead an
+approximate greedy algorithm with randomization is used. It is implemented in the run_randomized_greedy_algorithm()
+function. The algorithm will be described below.
+
+REORDERING THE ROWS / SETS
+
+Unlike the order of chunks, the order of sets can be relevant in some cases. For example, our sets sets may relate
+to different moments in time, and we may deem it important to preserve this temporal structure in the plot. But in
+other cases when there is no inherent order to our sets, we might want to reorder the sets (rows of the composition
+array) so that similar sets are closer to each other.
+
+This is done by running the same algorithm on the transposed array. But there is an important distinction here: the
+chunks are of different size, and it makes more sense to minimize total gap width, instead of just gap count.
+To allow that, the run_randomized_greedy_algorithm() function accepts an additional argument named :row_weights:,
+and minimizes gap counts weighted with these coefficients. In other words, the minimization target becomes
+sum_i(gaps_count_in_row[i] * row_weights[i]) instead of just sum_i(gaps_count_in_row[i]).
+
+DESCRIPTION OF THE ALGORITHM
+
+Recall that our goal is to a find a permutation of columns of a matrix of zeros and ones, so that the row-weighted
+sum of gaps counts in rows is as low as possible.
+
+Define similarity of two columns as the sum of row weights for rows where the values are equal in the two columns.
+Precompute matrix of similarities of all columns (if arr has N columns, this matrix has shape N x N)
+Find two most similar columns C1, C2, initialize two lists [C1,] and [C2,]
+Among the remaining N-2 columns, find one that has largest similarity to either of C1 or C2. Append that column to
+the corresponding list. E.g. we now have lists [C1, C3] and [C2,]
+Among the remaining N-3 columns find one that has largest similarity to the last elemt of either of the lists (in
+our example, C3 and C2). Append it to the corresponding list.
+Continue until all columns are distributed between in two lists.
+Finally, one of the lists is reversed and the other is concatenated to it on the right, which gives the resulting
+permutation. This concludes the greedy algorithm.
+
+To mitigate the greediness, the similarity matrix is perturbed by means of adding a random matrix R with
+elements {0, noise_value} with a fixed  probability of non-zero, and the whole greedy procedure is repeated.
+This is done with :seeds: different random matrices, and so :seeds: + 1 permutations are obtained (including the one
+produced from the unperturbed similarities matrix). The permutation that yields the smallest value
+of count_runs_of_ones_in_rows(arr[:, permutation]) is returned.
 """
 from collections import defaultdict
 import datetime
@@ -482,7 +482,7 @@ def get_permutations(
         else:
             raise ValueError(case["ordering"])
 
-        if case["ordering"] is not None and case["reverse"]:
+        if case["reverse"]:
             permutation = permutation[::-1]
 
         permutations_[case["param"]] = permutation
