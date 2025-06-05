@@ -632,7 +632,7 @@ def supervenn(
     )  # todo: break_into_chunks is called twice, fix
 
 
-def odds_ratio_venn(
+def oddsratio_venn(
     complete_set,
     subgroup_set_0,
     subgroup_set_1,
@@ -787,7 +787,7 @@ def odds_ratio_venn(
 
 
 # TODO: UNFINISHED AND MESSY - CURRENTLY PROTOTYPING
-def subgroupvenn(
+def subgroup_venn(
     sets,
     subgroup_sets,
     # Plotting
@@ -1053,7 +1053,7 @@ def create_stratified_error_profile(
     )
 
     plt.figure(figsize=figsize)
-    venn = subgroupvenn(
+    venn = subgroup_venn(
         sets,
         subgroups,
         set_annotations=set_annotations if set_annotations else columns,
@@ -1064,7 +1064,7 @@ def create_stratified_error_profile(
     return venn
 
 
-def compare_error_odds(
+def create_oddratio_profile(
     df,
     subgroup,
     id=None,
@@ -1090,23 +1090,23 @@ def compare_error_odds(
     )
     plt.close()
 
-    subgroup_venns = []
+    subgroup_profiles = []
     for subgroup in df["Subgroup"].unique():
         subgroup_df = df[df["Subgroup"] == subgroup]
-        subgroup_venn = create_error_profile(
+        subgroup_profile = create_error_profile(
             subgroup_df,
             id=id,
             columns=columns,
             incorrect_value=incorrect_value,
         )
         plt.close()
-        subgroup_venns.append(subgroup_venn)
+        subgroup_profiles.append(subgroup_profile)
 
     plt.figure(figsize=figsize)
-    odds_ratio_venn(
+    oddsratio_venn(
         venn,
-        subgroup_venns[0],
-        subgroup_venns[1],
+        subgroup_profiles[0],
+        subgroup_profiles[1],
         square_cell=True,
         set_annotations=set_annotations,
     )

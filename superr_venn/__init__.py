@@ -5,10 +5,10 @@ from superr_venn._algorithms import (
 )
 from superr_venn._plots import (
     supervenn,
-    odds_ratio_venn,
-    subgroupvenn,
+    oddsratio_venn,
+    subgroup_venn,
     create_error_profile,
-    compare_error_odds,
+    create_oddratio_profile,
     create_stratified_error_profile,
 )
 from superr_venn._utils import make_sets_from_chunk_sizes
