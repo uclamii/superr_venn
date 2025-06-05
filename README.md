@@ -39,7 +39,7 @@ create_stratified_error_profile(df,
 Below is an example dataframe.
 
 ```
-display(df)
+display(df.head())
 ```
 |    |   Model 1 |   Model 2 |   Model 3 |   Model 4 |   Model 5 |   Patient ID | Subgroup   |
 |---:|----------:|----------:|----------:|----------:|----------:|-------------:|:-----------|
@@ -48,7 +48,7 @@ display(df)
 |  2 |         0 |         0 |         0 |         0 |         0 |            3 | B          |
 |  3 |         0 |         0 |         1 |         0 |         0 |            4 | A          |
 |  4 |         0 |         0 |         0 |         0 |         0 |            5 | A          |
-
+...
 ```
 create_error_profile(
     df,
@@ -57,7 +57,6 @@ create_error_profile(
     incorrect_value=1,
 )
 ```
-![alt text](image.png)
 
 # Credit
 Source repository: https://github.com/gecko984/supervenn. Most of the algorithms are adapted from the original repo. The edits are to extend the visualizations for error analysis.
